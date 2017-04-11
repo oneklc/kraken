@@ -5,7 +5,10 @@ pip install pymongo
 """
 
 import krakenex
-import pymongo
+from pymongo import MongoClient, ASCENDING
+from datetime import datetime
+from time import sleep
+
 
 k = krakenex.API()
 k.load_key('lost.key')
@@ -50,7 +53,7 @@ assetPairs = k.query_public("AssetPairs")
 
 #convert asset pairs into comma delimted string to send to ticker api call
 key_string = ','.join(assetPairs['result'].keys())
-ticker = k.query_public("Ticker",{'pair': key_string})
+#ticker = k.query_public("Ticker",{'pair': key_string})
 
 # <pair_name> = pair name
 #     a = ask array(<price>, <whole lot volume>, <lot volume>),
@@ -63,4 +66,58 @@ ticker = k.query_public("Ticker",{'pair': key_string})
 #     h = high array(<today>, <last 24 hours>),
 #     o = today's opening price
 
+
+# Get trade volume
+# URL: https://api.kraken.com/0/private/TradeVolume
+#
+# Input:
+#
+# pair = comma delimited list of asset pairs to get fee info on (optional)
+# fee-info = whether or not to include fee info in results (optional)
+# Result: associative array
+#
+
+# currency = volume currency
+# volume = current discount volume
+# fees = array of asset pairs and fee tier info (if requested)
+#     fee = current fee in percent
+#     minfee = minimum fee for pair (if not fixed fee)
+#     maxfee = maximum fee for pair (if not fixed fee)
+#     nextfee = next tier's fee for pair (if not fixed fee.  nil if at lowest fee tier)
+#     nextvolume = volume level of next tier (if not fixed fee.  nil if at lowest fee tier)
+#     tiervolume = volume level of current tier (if not fixed fee.  nil if at lowest fee tier)
+# fees_maker = array of asset pairs and maker fee tier info (if requested) for any pairs on maker/taker schedule
+#     fee = current fee in percent
+#     minfee = minimum fee for pair (if not fixed fee)
+#     maxfee = maximum fee for pair (if not fixed fee)
+#     nextfee = next tier's fee for pair (if not fixed fee.  nil if at lowest fee tier)
+#     nextvolume = volume level of next tier (if not fixed fee.  nil if at lowest fee tier)
+#     tiervolume = volume level of current tier (if not fixed fee.  nil if at lowest fee tier)
+
+
+client = MongoClient('192.168.1.83', 27017)
+db = client.kraken
+tickers = db.tickers
+tickers.create_index([('timestamp', ASCENDING)], unique=True)
+
+#for i in range(10):
+i=0
+while True:
+    i+=1
+    ticker_data = k.query_public("Ticker", {'pair': key_string})['result']
+    #trade_volume = k.query_private("TradeVolume", {'pair': key_string, 'fee-info': True})['result']
+
+    now = datetime.utcnow()
+    print( 'Collected {}th ticker at time {} '.format( i,str(now)))
+    print('Inserting ticker in mongo.')
+    print(ticker_data)
+    ticker_id =  tickers.insert_one({
+        "timestamp": now,
+        "ticker": ticker_data,
+        #"trade_volume": trade_volume
+    })
+
+
+    print("inserted: {}".format(ticker_id))
+    sleep(4)
 
