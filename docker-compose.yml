@@ -1,0 +1,13 @@
+#Orchestation files for starting mongodb
+
+version: '2'
+services:
+
+
+  mongodb:
+      image: mongo:3.3
+      environment:
+          - TZ= "US/Pacific"
+      volumes:
+          - /home/klc/mongo3data:/data/db
+      entrypoint: ['mongod', '--rest']

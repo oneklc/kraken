@@ -104,8 +104,12 @@ tickers.create_index([('timestamp', ASCENDING)], unique=True)
 i=0
 while True:
     i+=1
-    ticker_data = k.query_public("Ticker", {'pair': key_string})['result']
-    #trade_volume = k.query_private("TradeVolume", {'pair': key_string, 'fee-info': True})['result']
+    try:
+        ticker_data = k.query_public("Ticker", {'pair': key_string})['result']
+        # trade_volume = k.query_private("TradeVolume", {'pair': key_string, 'fee-info': True})['result']
+    except IOError:
+        print(IOError)
+        continue
 
     now = datetime.utcnow()
     print( 'Collected {}th ticker at time {} '.format( i,str(now)))
@@ -119,5 +123,5 @@ while True:
 
 
     print("inserted: {}".format(ticker_id))
-    sleep(4)
+    sleep(5)
 
