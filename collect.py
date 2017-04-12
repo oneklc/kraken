@@ -4,14 +4,18 @@ pip install krakenex
 pip install pymongo
 """
 
+import json
+from urllib.request import Request, urlopen
+
 import krakenex
 from pymongo import MongoClient, ASCENDING
-from datetime import datetime
-from time import sleep
 
+from poloniex import poloniex
 
 k = krakenex.API()
 k.load_key('lost.key')
+
+p = poloniex("apikey", "secret")
 
 # k.query_private('AddOrder', {'pair': 'XXBTZEUR',
 #                              'type': 'buy',
@@ -51,9 +55,9 @@ assetPairs = k.query_public("AssetPairs")
 #     margin_call = margin call level
 #     margin_stop = stop-out/liquidation margin level
 
-#convert asset pairs into comma delimted string to send to ticker api call
+# convert asset pairs into comma delimted string to send to ticker api call
 key_string = ','.join(assetPairs['result'].keys())
-#ticker = k.query_public("Ticker",{'pair': key_string})
+# ticker = k.query_public("Ticker",{'pair': key_string})
 
 # <pair_name> = pair name
 #     a = ask array(<price>, <whole lot volume>, <lot volume>),
@@ -96,32 +100,45 @@ key_string = ','.join(assetPairs['result'].keys())
 
 
 client = MongoClient('192.168.1.83', 27017)
-db = client.kraken
+db = client.crypto_market_data
 tickers = db.tickers
 tickers.create_index([('timestamp', ASCENDING)], unique=True)
 
-#for i in range(10):
-i=0
+# for i in range(10):
+i = 0
 while True:
-    i+=1
+    i += 1
     try:
-        ticker_data = k.query_public("Ticker", {'pair': key_string})['result']
-        # trade_volume = k.query_private("TradeVolume", {'pair': key_string, 'fee-info': True})['result']
-    except IOError:
-        print(IOError)
-        continue
+        kraken_ticker_data = k.query_public("Ticker", {'pair': key_string})['result']
+        poloniex_ticker_data = p.returnTicker()
+
+        # FIXME: Doesn't work, response from server is empty
+        # pasting https://cryptottlivewebapi.xbtce.net:8443/api/v1/public/ticker in a broswer works
+        # tried differnt combinations of headers, copied these from a successful get in chrome
+        # ret = urlopen(Request('https://cryptottlivewebapi.xbtce.net:8443/api/v1/public/ticker', headers=
+        # {'Host': 'cryptottlivewebapi.xbtce.net:8443',
+        #  'Connection': 'keep-alive',
+        #  'Accept': 'application/json',
+        #  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+        #  'Referer': 'https://cryptottlivewebapi.xbtce.net:8443/api/doc/index?apiaddress=cryptottlivewebapi.xbtce.net&apiport=8443',
+        #  'Accept-Encoding': 'gzip, deflate, sdch, br',
+        #  'Accept-Language': 'en-GB,en;q=0.8,en-US;q=0.6,ar;q=0.4'}))
+        #
+        # xBTCe_ticker_data = json.loads(ret.read().decode('utf8'))
+
+    except Exception as e:
+        print(e)
+    continue
 
     now = datetime.utcnow()
-    print( 'Collected {}th ticker at time {} '.format( i,str(now)))
+    print('Collected {}th ticker at time {} '.format(i, str(now)))
     print('Inserting ticker in mongo.')
-    print(ticker_data)
-    ticker_id =  tickers.insert_one({
-        "timestamp": now,
-        "ticker": ticker_data,
-        #"trade_volume": trade_volume
-    })
 
+    ticker_id = tickers.insert_one({
+        "timestamp": now,
+        "kraken_ticker": kraken_ticker_data,
+        "poloniex_ticker": poloniex_ticker_data
+    })
 
     print("inserted: {}".format(ticker_id))
     sleep(5)
-
