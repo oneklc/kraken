@@ -5,6 +5,8 @@ pip install pymongo
 """
 
 import json
+from datetime import datetime
+from time import sleep
 from urllib.request import Request, urlopen
 
 import krakenex
@@ -127,8 +129,9 @@ while True:
         # xBTCe_ticker_data = json.loads(ret.read().decode('utf8'))
 
     except Exception as e:
-        print(e)
-    continue
+        print("Error thrown: {}".format(e))
+        sleep(2)
+        continue
 
     now = datetime.utcnow()
     print('Collected {}th ticker at time {} '.format(i, str(now)))
