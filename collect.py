@@ -22,6 +22,7 @@ k.load_key('lost.key')
 #                              'close[volume]': '1'})
 
 assets = k.query_public("Assets")
+
 # <asset_name> = asset name
 #     altname = alternate name
 #     aclass = asset class
