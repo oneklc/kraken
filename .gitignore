@@ -1,6 +1,7 @@
 lost.key
 *.png
 .idea/
+__pycache__
 
 # Created by .ignore support plugin (hsz.mobi)
 ### JetBrains template
